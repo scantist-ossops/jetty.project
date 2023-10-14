@@ -8,11 +8,7 @@ pipeline {
     durabilityHint('PERFORMANCE_OPTIMIZED')
     buildDiscarder logRotator( numToKeepStr: '60' )
     disableRestartFromStage()
-    mavenCache(enable: true)
-  }
-  triggers {
-    mavenCacheCleaner(spec: '@daily', expirationDays: 7)
-  }
+  }}
   stages {
     stage("Parallel Stage") {
       parallel {
@@ -116,7 +112,7 @@ def mavenBuild(jdk, cmdline, mvnName) {
           buildCache = useBuildCache()
           if (buildCache) {
           echo "Using build cache"
-            extraArgs = " -Dmaven.build.cache.restoreGeneratedSources=false -Dmaven.build.cache.remote.url=dav:http://nginx-cache-service.jenkins.svc.cluster.local:80 -Dmaven.build.cache.remote.enabled=true -Dmaven.build.cache.remote.save.enabled=true -Dmaven.build.cache.remote.server.id=remote-build-cache-server "
+            extraArgs = " -Dmaven.build.cache.restoreGeneratedSources=false -Dmaven.build.cache.remote.url=https://jenkins.webtide.net/job/system/job/maven-cache/maven-cache/repository -Dmaven.build.cache.remote.enabled=true -Dmaven.build.cache.remote.save.enabled=true -Dmaven.build.cache.remote.server.id=maven-cache-jenkins "
           } else {
             // when not using cache
             echo "Not using build cache"
