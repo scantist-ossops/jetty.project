@@ -8,6 +8,8 @@ pipeline {
     durabilityHint('PERFORMANCE_OPTIMIZED')
     buildDiscarder logRotator( numToKeepStr: '60' )
     disableRestartFromStage()
+    mavenCache(enable: true)
+    mavenCacheCleaner(spec: '@daily', expirationDays: 7)
   }
   stages {
     stage("Parallel Stage") {
