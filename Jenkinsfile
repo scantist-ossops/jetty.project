@@ -9,6 +9,8 @@ pipeline {
     buildDiscarder logRotator( numToKeepStr: '60' )
     disableRestartFromStage()
     mavenCache(enable: true)
+  }
+  triggers {
     mavenCacheCleaner(spec: '@daily', expirationDays: 7)
   }
   stages {
