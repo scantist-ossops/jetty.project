@@ -105,10 +105,7 @@ def mavenBuild(jdk, cmdline, mvnName) {
                "PATH+MAVEN=${ tool "$jdk" }/bin:${tool "$mvnName"}/bin",
                "MAVEN_OPTS=-Xms2g -Xmx4g -Djava.awt.headless=true"]) {
       configFileProvider(
-        [configFile(fileId: 'oss-settings.xml', variable: 'GLOBAL_MVN_SETTINGS'),
-          configFile(fileId: 'maven-build-cache-config.xml', variable: 'MVN_BUILD_CACHE_CONFIG')]) {
-          //sh "cp $MVN_BUILD_CACHE_CONFIG .mvn/maven-build-cache-config.xml"
-          //-Dmaven.build.cache.configPath=$MVN_BUILD_CACHE_CONFIG
+        [configFile(fileId: 'oss-settings.xml', variable: 'GLOBAL_MVN_SETTINGS')]) {
           buildCache = useBuildCache()
           if (buildCache) {
           echo "Using build cache"
