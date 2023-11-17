@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -458,7 +459,7 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
             out,
             indent,
             this,
-            DumpableMap.from("requested buffer sizes", _requestedBufferSizes),
+            DumpableMap.from("requested buffer sizes", new TreeMap<>(_requestedBufferSizes)),
             DumpableCollection.fromArray("direct", _direct),
             DumpableCollection.fromArray("indirect", _indirect));
     }
@@ -533,12 +534,13 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
             }
 
             long acquisitions = _acquisitions.longValue();
+            long avgWaste = acquisitions == 0 ? 0 : _waste.longValue() / acquisitions;
             return String.format("%s{capacity=%d,inuse=%d(%d%%),avgwaste=%d(%d)}",
                 super.toString(),
                 _capacity,
                 inUse,
                 entries > 0 ? (inUse * 100) / entries : 0,
-                _waste.longValue() / acquisitions, acquisitions);
+                avgWaste, acquisitions);
         }
     }
 
