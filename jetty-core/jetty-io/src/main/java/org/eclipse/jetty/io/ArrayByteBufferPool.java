@@ -22,8 +22,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
 import java.util.stream.Collectors;
@@ -39,6 +41,7 @@ import org.eclipse.jetty.util.annotation.ManagedObject;
 import org.eclipse.jetty.util.annotation.ManagedOperation;
 import org.eclipse.jetty.util.component.Dumpable;
 import org.eclipse.jetty.util.component.DumpableCollection;
+import org.eclipse.jetty.util.component.DumpableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,6 +70,7 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
     private final AtomicLong _currentHeapMemory = new AtomicLong();
     private final AtomicLong _currentDirectMemory = new AtomicLong();
     private final IntUnaryOperator _bucketIndexFor;
+    private final ConcurrentMap<Integer, Long> _requestedBufferSizes = new ConcurrentHashMap<>();
 
     /**
      * Creates a new ArrayByteBufferPool with a default configuration.
@@ -257,12 +261,20 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
 
     private RetainedBucket bucketFor(int capacity, boolean direct)
     {
+        _requestedBufferSizes.compute(capacity, (key, oldValue) ->
+        {
+            if (oldValue == null)
+                return 1L;
+            return oldValue + 1L;
+        });
         if (capacity < _minCapacity)
             return null;
         int idx = _bucketIndexFor.applyAsInt(capacity);
         RetainedBucket[] buckets = direct ? _direct : _indirect;
         if (idx >= buckets.length)
             return null;
+        RetainedBucket bucket = buckets[idx];
+        bucket.acquire(capacity);
         return buckets[idx];
     }
 
@@ -446,6 +458,7 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
             out,
             indent,
             this,
+            DumpableMap.from("requested buffer sizes", _requestedBufferSizes),
             DumpableCollection.fromArray("direct", _direct),
             DumpableCollection.fromArray("indirect", _indirect));
     }
@@ -481,6 +494,8 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
     {
         private final Pool<RetainableByteBuffer> _pool;
         private final int _capacity;
+        private final LongAdder _acquisitions = new LongAdder();
+        private final LongAdder _waste = new LongAdder();
 
         private RetainedBucket(int capacity, int poolSize)
         {
@@ -499,6 +514,12 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
             return _pool;
         }
 
+        private void acquire(int capacity)
+        {
+            _acquisitions.increment();
+            _waste.add(_capacity - capacity);
+        }
+
         @Override
         public String toString()
         {
@@ -511,11 +532,13 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
                     inUse++;
             }
 
-            return String.format("%s{capacity=%d,inuse=%d(%d%%)}",
+            long acquisitions = _acquisitions.longValue();
+            return String.format("%s{capacity=%d,inuse=%d(%d%%),avgwaste=%d(%d)}",
                 super.toString(),
                 _capacity,
                 inUse,
-                entries > 0 ? (inUse * 100) / entries : 0);
+                entries > 0 ? (inUse * 100) / entries : 0,
+                _waste.longValue() / acquisitions, acquisitions);
         }
     }
 
