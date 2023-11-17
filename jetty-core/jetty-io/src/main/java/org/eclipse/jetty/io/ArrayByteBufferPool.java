@@ -494,6 +494,7 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
     private static class RetainedBucket
     {
         private final Pool<RetainableByteBuffer> _pool;
+        private final ConcurrentPool<RetainableByteBuffer> _concurrentPool;
         private final int _capacity;
         private final LongAdder _acquisitions = new LongAdder();
         private final LongAdder _waste = new LongAdder();
@@ -501,10 +502,10 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
         private RetainedBucket(int capacity, int poolSize)
         {
             if (poolSize <= ConcurrentPool.OPTIMAL_MAX_SIZE)
-                _pool = new ConcurrentPool<>(ConcurrentPool.StrategyType.THREAD_ID, poolSize, e -> 1);
+                _pool = _concurrentPool = new ConcurrentPool<>(ConcurrentPool.StrategyType.THREAD_ID, poolSize, e -> 1);
             else
                 _pool = new CompoundPool<>(
-                    new ConcurrentPool<>(ConcurrentPool.StrategyType.THREAD_ID, ConcurrentPool.OPTIMAL_MAX_SIZE, e -> 1),
+                    _concurrentPool = new ConcurrentPool<>(ConcurrentPool.StrategyType.THREAD_ID, ConcurrentPool.OPTIMAL_MAX_SIZE, e -> 1),
                     new QueuedPool<>(poolSize - ConcurrentPool.OPTIMAL_MAX_SIZE)
                 );
             _capacity = capacity;
@@ -535,12 +536,15 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
 
             long acquisitions = _acquisitions.longValue();
             long avgWaste = acquisitions == 0 ? 0 : _waste.longValue() / acquisitions;
-            return String.format("%s{capacity=%d,inuse=%d(%d%%),avgwaste=%d(%d)}",
+            long poolAcquisitions = _concurrentPool.getAcquisitions();
+            long poolAvgProbes = poolAcquisitions == 0 ? 0 : _concurrentPool.getProbes() / poolAcquisitions;
+            return String.format("%s{capacity=%d,inuse=%d(%d%%),avgwaste=%d(%d),ConcurrentPool{lkd=%d,avgprb=%d}}",
                 super.toString(),
                 _capacity,
                 inUse,
                 entries > 0 ? (inUse * 100) / entries : 0,
-                avgWaste, acquisitions);
+                avgWaste, acquisitions,
+                _concurrentPool.getLeaked(), poolAvgProbes);
         }
     }
 
