@@ -537,15 +537,16 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
             long acquisitions = _acquisitions.longValue();
             long avgWaste = acquisitions == 0 ? 0 : _waste.longValue() / acquisitions;
             long poolAcquisitions = _concurrentPool.getAcquisitions();
-            long poolAvgProbes = poolAcquisitions == 0 ? 0 : _concurrentPool.getProbes() / poolAcquisitions;
-            return String.format("%s{capacity=%d,entries=%d,inuse=%d(%d%%),avgwaste=%d(%d),ConcurrentPool{sz=%d,lkd=%d,avgprb=%d}}",
+            long poolProbes = _concurrentPool.getProbes();
+            long poolAvgProbes = poolAcquisitions == 0 ? 0 : poolProbes / poolAcquisitions;
+            return String.format("%s{capacity=%d,entries=%d,inuse=%d(%d%%),avgwaste=%d(%d),ConcurrentPool{sz=%d,acq=%d,avgprb=%d(%d),lkd=%d}}",
                 super.toString(),
                 _capacity,
                 entries,
                 inUse,
                 entries > 0 ? (inUse * 100) / entries : 0,
                 avgWaste, acquisitions,
-                _concurrentPool.size(), _concurrentPool.getLeaked(), poolAvgProbes);
+                _concurrentPool.size(), poolAcquisitions, poolAvgProbes, poolProbes, _concurrentPool.getLeaked());
         }
     }
 
