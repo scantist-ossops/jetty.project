@@ -138,6 +138,11 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
      */
     protected ArrayByteBufferPool(int minCapacity, int factor, int maxCapacity, int maxBucketSize, long maxHeapMemory, long maxDirectMemory, IntUnaryOperator bucketIndexFor, IntUnaryOperator bucketCapacity)
     {
+        this(minCapacity, factor, maxCapacity, maxBucketSize, maxHeapMemory, maxDirectMemory, bucketIndexFor, bucketCapacity, ConcurrentPool.OPTIMAL_MAX_SIZE);
+    }
+
+    protected ArrayByteBufferPool(int minCapacity, int factor, int maxCapacity, int maxBucketSize, long maxHeapMemory, long maxDirectMemory, IntUnaryOperator bucketIndexFor, IntUnaryOperator bucketCapacity, int concurrentPoolSize)
+    {
         if (minCapacity <= 0)
             minCapacity = 0;
         factor = factor <= 0 ? DEFAULT_FACTOR : factor;
@@ -158,8 +163,8 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
         for (int i = 0; i < directArray.length; i++)
         {
             int capacity = Math.min(bucketCapacity.applyAsInt(i), maxCapacity);
-            directArray[i] = new RetainedBucket(capacity, maxBucketSize);
-            indirectArray[i] = new RetainedBucket(capacity, maxBucketSize);
+            directArray[i] = new RetainedBucket(capacity, maxBucketSize, concurrentPoolSize);
+            indirectArray[i] = new RetainedBucket(capacity, maxBucketSize, concurrentPoolSize);
         }
 
         _minCapacity = minCapacity;
@@ -499,14 +504,14 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
         private final LongAdder _acquisitions = new LongAdder();
         private final LongAdder _waste = new LongAdder();
 
-        private RetainedBucket(int capacity, int poolSize)
+        private RetainedBucket(int capacity, int maxPoolSize, int concurrentPoolSize)
         {
-            if (poolSize <= ConcurrentPool.OPTIMAL_MAX_SIZE)
-                _pool = _concurrentPool = new ConcurrentPool<>(ConcurrentPool.StrategyType.THREAD_ID, poolSize, e -> 1);
+            if (maxPoolSize <= concurrentPoolSize)
+                _pool = _concurrentPool = new ConcurrentPool<>(ConcurrentPool.StrategyType.THREAD_ID, maxPoolSize, e -> 1);
             else
                 _pool = new CompoundPool<>(
-                    _concurrentPool = new ConcurrentPool<>(ConcurrentPool.StrategyType.THREAD_ID, ConcurrentPool.OPTIMAL_MAX_SIZE, e -> 1),
-                    new QueuedPool<>(poolSize - ConcurrentPool.OPTIMAL_MAX_SIZE)
+                    _concurrentPool = new ConcurrentPool<>(ConcurrentPool.StrategyType.THREAD_ID, concurrentPoolSize, e -> 1),
+                    new QueuedPool<>(maxPoolSize - concurrentPoolSize)
                 );
             _capacity = capacity;
         }
