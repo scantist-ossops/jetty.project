@@ -16,6 +16,8 @@ package org.eclipse.jetty.util.component;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 public class DumpableMap implements Dumpable
 {
@@ -30,7 +32,15 @@ public class DumpableMap implements Dumpable
 
     public static DumpableMap from(String name, Map<?, ?> items)
     {
-        return new DumpableMap(name, items == null ? Collections.emptyMap() : items);
+        return from(name, items, false);
+    }
+
+    public static DumpableMap from(String name, Map<?, ?> items, boolean ordered)
+    {
+        items = items == null ? Collections.emptyMap() : items;
+        if (ordered && !(items instanceof SortedMap<?,?>))
+            items = new TreeMap<>(items);
+        return new DumpableMap(name, items);
     }
 
     @Override

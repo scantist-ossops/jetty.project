@@ -21,7 +21,6 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -141,7 +140,7 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
         this(minCapacity, factor, maxCapacity, maxBucketSize, maxHeapMemory, maxDirectMemory, bucketIndexFor, bucketCapacity, ConcurrentPool.OPTIMAL_MAX_SIZE);
     }
 
-    protected ArrayByteBufferPool(int minCapacity, int factor, int maxCapacity, int maxBucketSize, long maxHeapMemory, long maxDirectMemory, IntUnaryOperator bucketIndexFor, IntUnaryOperator bucketCapacity, int concurrentPoolSize)
+    public ArrayByteBufferPool(int minCapacity, int factor, int maxCapacity, int maxBucketSize, long maxHeapMemory, long maxDirectMemory, IntUnaryOperator bucketIndexFor, IntUnaryOperator bucketCapacity, int concurrentPoolSize)
     {
         if (minCapacity <= 0)
             minCapacity = 0;
@@ -464,7 +463,7 @@ public class ArrayByteBufferPool implements ByteBufferPool, Dumpable
             out,
             indent,
             this,
-            DumpableMap.from("requested buffer sizes", new TreeMap<>(_requestedBufferSizes)),
+            DumpableMap.from("requested buffer sizes", _requestedBufferSizes, true),
             DumpableCollection.fromArray("direct", _direct),
             DumpableCollection.fromArray("indirect", _indirect));
     }
