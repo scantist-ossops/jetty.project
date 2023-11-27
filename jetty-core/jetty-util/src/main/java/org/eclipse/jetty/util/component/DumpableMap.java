@@ -28,7 +28,7 @@ public class DumpableMap implements Dumpable
         _map = map;
     }
 
-    public static DumpableMap from(String name, Map<?,?> items)
+    public static DumpableMap from(String name, Map<?, ?> items)
     {
         return new DumpableMap(name, items == null ? Collections.emptyMap() : items);
     }
